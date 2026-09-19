@@ -10,6 +10,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://industry-and-automation-production.up.railway.app/api/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/frontend/$1"
     }
