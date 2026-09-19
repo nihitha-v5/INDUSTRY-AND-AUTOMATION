@@ -36,6 +36,15 @@ def get_active_adapter(db: Session):
 
     return adapter, active_model.name
 
+from fastapi.responses import FileResponse
+
+@router.get("/upload/{filename}")
+def get_uploaded_image(filename: str):
+    file_path = os.path.join(settings.UPLOAD_DATA_PATH, filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail="Image not found")
+
 @router.post("/predict", response_model=InspectionResponse)
 def run_inspection(
     file: UploadFile = File(...),

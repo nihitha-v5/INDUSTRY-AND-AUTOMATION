@@ -38,11 +38,11 @@ export const VisualInspectionPage: React.FC = () => {
       
       // Fetch preset sample image blob for selected category
       const fileName = `${categoryKey}_sample.png`;
-      const res = await fetch(`/api/inspection/upload/${fileName}`).catch(() => null);
+      const res = await fetch(`/api/inspection/upload/${fileName}`);
+      if (!res.ok) throw new Error("Failed to fetch sample image");
       
-      // Create artificial File object for sample
-      const blob = await fetch(`data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==`).then(r => r.blob());
-      const file = new File([blob], `${categoryKey}_sample.png`, { type: 'image/png' });
+      const blob = await res.blob();
+      const file = new File([blob], fileName, { type: 'image/png' });
       
       setSelectedFiles([file]);
       setPreviewUrls([URL.createObjectURL(blob)]);
