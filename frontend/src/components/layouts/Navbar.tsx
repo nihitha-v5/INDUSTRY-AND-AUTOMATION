@@ -52,12 +52,12 @@ export const Navbar: React.FC = () => {
         {isDemoMode ? (
           <div className="flex items-center space-x-2 px-3 py-1 bg-amber-500/15 border border-amber-500/40 rounded-full text-amber-400 text-[11px] font-semibold tracking-wide glow-amber">
             <AlertTriangle className="w-3.5 h-3.5 animate-pulse" />
-            <span>DEMO DATA – NOT ORGANIZER DATA</span>
+            <span>DEMO DATA ACTIVE</span>
           </div>
         ) : (
           <div className="flex items-center space-x-2 px-3 py-1 bg-emerald-500/15 border border-emerald-500/40 rounded-full text-emerald-400 text-[11px] font-semibold tracking-wide glow-emerald">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>ORGANIZER DATA ACTIVE</span>
+            <span>LIVE DATA ACTIVE</span>
           </div>
         )}
       </div>
