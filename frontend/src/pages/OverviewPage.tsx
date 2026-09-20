@@ -61,11 +61,7 @@ export const OverviewPage: React.FC = () => {
             <h1 className="text-2xl font-black text-white tracking-tight flex items-center space-x-2">
               <span>Executive Overview Dashboard</span>
             </h1>
-            {data.is_demo && (
-              <span className="text-[10px] bg-amber-500/15 border border-amber-500/40 text-amber-400 font-bold px-3 py-1 rounded-full font-mono tracking-wider glow-amber">
-                DEMO DATA ACTIVE
-              </span>
-            )}
+
           </div>
           <p className="text-xs text-industrial-400 mt-1 font-mono leading-relaxed">
             Multi-Source Industrial Decision Support Platform • Real-Time Operations Telemetry & Financial Health
