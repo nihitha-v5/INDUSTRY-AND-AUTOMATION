@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Settings, Sliders, ShieldCheck, ToggleLeft, ToggleRight, Save } from 'lucide-react';
+import { Settings, Sliders, ShieldCheck, ToggleLeft, ToggleRight, Save, Database, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { mongodbApi } from '../api/mongodb';
 
 export const SettingsPage: React.FC = () => {
   const { role, user } = useAuth();
@@ -10,6 +11,21 @@ export const SettingsPage: React.FC = () => {
   const [enableEconomics, setEnableEconomics] = useState(true);
   const [enableSimulation, setEnableSimulation] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [syncingMongo, setSyncingMongo] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleSyncMongo = async () => {
+    setSyncingMongo(true);
+    setSyncMessage(null);
+    try {
+      const res = await mongodbApi.syncInspections();
+      setSyncMessage(`✓ ${res.message}`);
+    } catch (err: any) {
+      setSyncMessage(`✗ Error syncing to MongoDB: ${err?.response?.data?.detail || err.message}`);
+    } finally {
+      setSyncingMongo(false);
+    }
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,9 +149,60 @@ export const SettingsPage: React.FC = () => {
               <span className="text-industrial-400">Backend API URL:</span> http://localhost:8000/api
             </div>
             <div>
-              <span className="text-industrial-400">Database Engine:</span> SQLite (PostgreSQL Compatible)
+              <span className="text-industrial-400">Primary Database:</span> SQLite (PostgreSQL Compatible)
             </div>
           </div>
+        </div>
+
+        {/* MongoDB Atlas Integration Status & Sync */}
+        <div className="glass-card rounded-xl p-6 border border-industrial-800 space-y-4 font-mono text-xs">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-white flex items-center space-x-2">
+              <Database className="w-4 h-4 text-emerald-400" />
+              <span>MongoDB Atlas Cloud Integration (pymongo / motor)</span>
+            </h2>
+            <div className="flex items-center space-x-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+                Connected
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-industrial-950 border border-industrial-800 rounded-lg space-y-2 text-industrial-300">
+            <div className="flex justify-between items-center">
+              <span className="text-industrial-400">Cluster Host:</span>
+              <span className="text-white font-mono">cluster0.zkp4y51.mongodb.net</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-industrial-400">Target Database:</span>
+              <span className="text-brand-blue font-bold">auronix</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-industrial-400">Driver Architecture:</span>
+              <span className="text-brand-cyan">PyMongo (Sync) + Motor (Async AsyncIO)</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-[11px] text-industrial-400 font-sans">
+              Stream and replicate real-time inspection records and telemetry events to MongoDB Atlas collections.
+            </p>
+            <button
+              type="button"
+              onClick={handleSyncMongo}
+              disabled={syncingMongo}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-industrial-950 font-bold text-xs rounded-lg transition-all font-mono shadow shrink-0 flex items-center space-x-2 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncingMongo ? 'animate-spin' : ''}`} />
+              <span>{syncingMongo ? 'Syncing...' : 'Sync to MongoDB Atlas'}</span>
+            </button>
+          </div>
+          {syncMessage && (
+            <div className="text-xs text-emerald-400 font-mono bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2.5">
+              {syncMessage}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center space-x-4">

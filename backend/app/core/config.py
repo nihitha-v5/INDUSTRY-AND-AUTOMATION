@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
     DATABASE_URL: str = "sqlite:///./app.db"
+    MONGODB_URL: Optional[str] = None
+    MONGODB_DB_NAME: str = "auronix"
 
     RAW_DATA_PATH: str = "data/raw"
     PROCESSED_DATA_PATH: str = "data/processed"

@@ -8,7 +8,7 @@ from backend.app.services.demo_service import init_demo_data
 from backend.app.api import (
     auth, datasets, models, inspection,
     analytics, simulation, recommendations,
-    dashboard, reports
+    dashboard, reports, mongodb_router
 )
 
 # Initialize database tables
@@ -47,6 +47,7 @@ app.include_router(simulation.router)
 app.include_router(recommendations.router)
 app.include_router(dashboard.router)
 app.include_router(reports.router)
+app.include_router(mongodb_router.router)
 
 @app.get("/")
 def root():
