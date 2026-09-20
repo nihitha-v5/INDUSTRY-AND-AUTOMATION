@@ -61,10 +61,17 @@ export const DataManagementPage: React.FC = () => {
       const uploaded = await datasetsApi.upload(formData);
       await refreshDatasets(uploaded.id);
       setUploadSuccess(`Successfully uploaded and profiled "${uploaded.name}" (${uploaded.row_count} rows, ${uploaded.column_count} columns)`);
-      setSelectedFile(null);
     } catch (err: any) {
       console.error("Upload error:", err);
-      setUploadError(err?.response?.data?.detail || "Upload failed. Please verify file format (.csv, .xlsx, .json, .zip, .png, .jpg).");
+      if (err?.response?.status === 404) {
+        setUploadError("Backend API not reachable (404). If running on Vercel, make sure your FastAPI backend URL is set in Vercel Environment Variables as 'VITE_API_URL'.");
+      } else if (err?.response?.status === 413) {
+        setUploadError("File exceeds upload size limit (413 Payload Too Large). Try uploading a smaller ZIP or compressed images.");
+      } else if (!err?.response && err?.message === "Network Error") {
+        setUploadError("Network Error: Could not connect to backend server. Please verify backend is running and CORS is enabled.");
+      } else {
+        setUploadError(err?.response?.data?.detail || err?.message || "Upload failed. Please verify file format (.csv, .xlsx, .json, .zip, .png, .jpg).");
+      }
     } finally {
       setUploading(false);
     }
