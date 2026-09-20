@@ -56,8 +56,7 @@ class DetectionAdapter(BaseModelAdapter):
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         bounding_boxes = []
-        scale_x = w_orig / float(self.input_shape[1])
-        scale_y = h_orig / float(self.input_shape[0])
+
 
         # Determine dominant defect label
         if forced_class:
@@ -85,16 +84,16 @@ class DetectionAdapter(BaseModelAdapter):
                 area = cv2.contourArea(c)
                 if 20 < area < 10000:
                     x, y, w, h = cv2.boundingRect(c)
-                    real_x = round(x * scale_x, 1)
-                    real_y = round(y * scale_y, 1)
-                    real_w = round(w * scale_x, 1)
-                    real_h = round(h * scale_y, 1)
+                    perc_x = round((x / float(self.input_shape[1])) * 100, 2)
+                    perc_y = round((y / float(self.input_shape[0])) * 100, 2)
+                    perc_w = round((w / float(self.input_shape[1])) * 100, 2)
+                    perc_h = round((h / float(self.input_shape[0])) * 100, 2)
 
                     bounding_boxes.append({
-                        "x": real_x,
-                        "y": real_y,
-                        "w": real_w,
-                        "h": real_h,
+                        "x": perc_x,
+                        "y": perc_y,
+                        "w": perc_w,
+                        "h": perc_h,
                         "confidence": target_conf,
                         "label": dominant_class
                     })
@@ -102,10 +101,10 @@ class DetectionAdapter(BaseModelAdapter):
             # Synthetic bounding box fallback if contour threshold didn't capture region
             if len(bounding_boxes) == 0:
                 bounding_boxes.append({
-                    "x": round(w_orig * 0.25, 1),
-                    "y": round(h_orig * 0.25, 1),
-                    "w": round(w_orig * 0.50, 1),
-                    "h": round(h_orig * 0.40, 1),
+                    "x": 25.0,
+                    "y": 25.0,
+                    "w": 50.0,
+                    "h": 40.0,
                     "confidence": target_conf,
                     "label": dominant_class
                 })

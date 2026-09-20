@@ -298,10 +298,10 @@ export const VisualInspectionPage: React.FC = () => {
                             key={bIdx}
                             style={{
                               position: 'absolute',
-                              left: `${box.x}px`,
-                              top: `${box.y}px`,
-                              width: `${box.w}px`,
-                              height: `${box.h}px`,
+                              left: `${box.x}%`,
+                              top: `${box.y}%`,
+                              width: `${box.w}%`,
+                              height: `${box.h}%`,
                             }}
                             className="border-2 border-rose-500 bg-rose-500/20 rounded-md pointer-events-none glow-rose animate-pulse-subtle"
                           >
