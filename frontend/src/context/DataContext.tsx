@@ -6,7 +6,7 @@ interface DataContextType {
   activeDataset: Dataset | null;
   datasets: Dataset[];
   isDemoMode: boolean;
-  refreshDatasets: () => Promise<void>;
+  refreshDatasets: (selectId?: number) => Promise<void>;
   selectDataset: (dataset: Dataset) => void;
 }
 
@@ -16,13 +16,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [activeDataset, setActiveDataset] = useState<Dataset | null>(null);
 
-  const refreshDatasets = async () => {
+  const refreshDatasets = async (selectId?: number) => {
     try {
       const list = await datasetsApi.list();
       setDatasets(list);
-      if (list.length > 0 && !activeDataset) {
-        const demoOrActive = list.find(d => d.is_active) || list[0];
-        setActiveDataset(demoOrActive);
+      if (list.length > 0) {
+        if (selectId) {
+          const target = list.find(d => d.id === selectId);
+          if (target) {
+            setActiveDataset(target);
+            return;
+          }
+        }
+        if (!activeDataset) {
+          const active = list.find(d => d.is_active) || list[0];
+          setActiveDataset(active);
+        } else {
+          // Refresh active dataset details (like columns)
+          const updated = list.find(d => d.id === activeDataset.id);
+          if (updated) setActiveDataset(updated);
+        }
       }
     } catch (err) {
       console.warn("Could not fetch datasets list from backend. Using demo fallback mode.");

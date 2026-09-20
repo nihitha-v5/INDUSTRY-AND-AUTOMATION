@@ -5,9 +5,11 @@ import { Dataset, DataQualityReport } from '../types';
 import { useData } from '../context/DataContext';
 
 export const DataManagementPage: React.FC = () => {
-  const { activeDataset, refreshDatasets } = useData();
+  const { activeDataset, datasets, refreshDatasets, selectDataset } = useData();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [qualityReport, setQualityReport] = useState<DataQualityReport | null>(null);
   const [validating, setValidating] = useState(false);
   const [mappings, setMappings] = useState<Record<string, string>>({});
@@ -50,15 +52,19 @@ export const DataManagementPage: React.FC = () => {
     if (!selectedFile) return;
 
     setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
     const formData = new FormData();
     formData.append('file', selectedFile);
 
     try {
-      await datasetsApi.upload(formData);
-      await refreshDatasets();
+      const uploaded = await datasetsApi.upload(formData);
+      await refreshDatasets(uploaded.id);
+      setUploadSuccess(`Successfully uploaded and profiled "${uploaded.name}" (${uploaded.row_count} rows, ${uploaded.column_count} columns)`);
       setSelectedFile(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Upload error:", err);
+      setUploadError(err?.response?.data?.detail || "Upload failed. Please verify file format (.csv, .xlsx, .json, .zip, .png, .jpg).");
     } finally {
       setUploading(false);
     }
@@ -86,7 +92,7 @@ export const DataManagementPage: React.FC = () => {
         semantic_role: role
       }));
       await datasetsApi.mapColumns(activeDataset.id, list);
-      await refreshDatasets();
+      await refreshDatasets(activeDataset.id);
     } catch (err) {
       console.error("Error saving mapping:", err);
     } finally {
@@ -96,36 +102,81 @@ export const DataManagementPage: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="border-b border-industrial-800 pb-4">
-        <h1 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2">
-          <Database className="w-5 h-5 text-brand-blue" />
-          <span>Data Management & Dynamic Pipeline Profiling</span>
-        </h1>
-        <p className="text-xs text-industrial-400 mt-1 font-mono">
-          Upload multi-stage datasets, map semantic column definitions, and execute data quality engine checks.
-        </p>
+      <div className="border-b border-industrial-800 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2">
+            <Database className="w-5 h-5 text-brand-blue" />
+            <span>Data Management & Dynamic Pipeline Profiling</span>
+          </h1>
+          <p className="text-xs text-industrial-400 mt-1 font-mono">
+            Upload multi-stage datasets, map semantic column definitions, and execute data quality engine checks.
+          </p>
+        </div>
+
+        {/* Dataset Switcher Dropdown */}
+        {datasets.length > 0 && (
+          <div className="flex items-center space-x-2 bg-industrial-950 border border-industrial-800 rounded-lg p-1.5 shrink-0">
+            <span className="text-[11px] font-mono text-industrial-400 pl-2">Active Dataset:</span>
+            <select
+              value={activeDataset?.id || ''}
+              onChange={(e) => {
+                const target = datasets.find(d => d.id === parseInt(e.target.value));
+                if (target) selectDataset(target);
+              }}
+              className="bg-industrial-900 text-brand-cyan border border-industrial-700/80 rounded px-2.5 py-1 text-xs font-mono font-semibold focus:outline-none cursor-pointer"
+            >
+              {datasets.map(d => (
+                <option key={d.id} value={d.id}>
+                  {d.name} {d.is_demo ? '(Demo)' : `(.${d.file_type})`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* File Upload Dropzone */}
-      <div className="glass-card rounded-xl p-6 border border-industrial-800">
-        <h2 className="text-sm font-semibold text-white mb-3 flex items-center space-x-2">
+      <div className="glass-card rounded-xl p-6 border border-industrial-800 space-y-3">
+        <h2 className="text-sm font-semibold text-white flex items-center space-x-2">
           <Upload className="w-4 h-4 text-brand-blue" />
-          <span>Upload Dataset File (CSV, XLSX, JSON, ZIP, Images)</span>
+          <span>Upload Dataset File (CSV, XLSX, JSON, ZIP Archive, Images)</span>
         </h2>
         <form onSubmit={handleFileUpload} className="flex flex-col md:flex-row items-center gap-4">
           <input
             type="file"
+            accept=".csv,.xlsx,.xls,.json,.zip,.png,.jpg,.jpeg,.webp,.bmp"
             onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
             className="block w-full text-xs text-industrial-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-industrial-800 file:text-brand-blue hover:file:bg-industrial-700 cursor-pointer bg-industrial-950 border border-industrial-800 rounded-lg p-1.5"
           />
           <button
             type="submit"
             disabled={!selectedFile || uploading}
-            className="px-5 py-2.5 bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 text-industrial-950 font-semibold text-xs rounded-lg transition-all shrink-0 font-mono shadow"
+            className="px-5 py-2.5 bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-50 text-industrial-950 font-semibold text-xs rounded-lg transition-all shrink-0 font-mono shadow flex items-center space-x-2"
           >
-            {uploading ? 'Processing File...' : 'Upload & Auto-Profile'}
+            {uploading ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Extracting & Profiling...</span>
+              </>
+            ) : (
+              <span>Upload & Auto-Profile</span>
+            )}
           </button>
         </form>
+
+        {uploadSuccess && (
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-xs font-mono text-emerald-400 flex items-center space-x-2">
+            <CheckCircle className="w-4 h-4 shrink-0" />
+            <span>{uploadSuccess}</span>
+          </div>
+        )}
+
+        {uploadError && (
+          <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-xs font-mono text-rose-400 flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>{uploadError}</span>
+          </div>
+        )}
       </div>
 
       {/* Dataset Schema Profiling Table */}

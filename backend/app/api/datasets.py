@@ -20,22 +20,27 @@ def upload_dataset(
     name: str = Form(None),
     db: Session = Depends(get_db)
 ):
-    # Security: File extension validation
-    allowed_exts = [".csv", ".xlsx", ".xls", ".json", ".zip"]
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in allowed_exts and not (ext in [".jpg", ".png", ".jpeg"]):
-        raise HTTPException(status_code=400, detail=f"File extension '{ext}' not allowed")
+    # Allowed extensions
+    allowed_exts = [".csv", ".xlsx", ".xls", ".json", ".zip", ".jpg", ".png", ".jpeg", ".webp", ".bmp"]
+    orig_name = file.filename or "uploaded_dataset"
+    base_name, ext = os.path.splitext(orig_name)
+    ext = ext.lower()
+    if ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail=f"File extension '{ext}' not allowed. Supported: .csv, .xlsx, .json, .zip, .jpg, .png")
 
-    dataset_name = name or file.filename
-    safe_filename = f"{dataset_name.replace(' ', '_')}_{ext}"
+    display_name = name or base_name
+    safe_filename = f"{base_name.replace(' ', '_')}{ext}"
     dest_path = os.path.join(settings.UPLOAD_DATA_PATH, safe_filename)
 
     with open(dest_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    # Deactivate previous active datasets so newly uploaded one is active
+    db.query(Dataset).update({Dataset.is_active: False})
+
     # Save initial record
     dataset = Dataset(
-        name=dataset_name,
+        name=display_name,
         file_type=ext.replace(".", ""),
         file_path=dest_path,
         is_demo=False,
@@ -46,10 +51,30 @@ def upload_dataset(
     db.commit()
     db.refresh(dataset)
 
-    # Profile if tabular
-    if ext in [".csv", ".xlsx", ".xls", ".json"]:
-        try:
+    # Profile logic based on file format
+    try:
+        df = None
+        if ext == ".zip":
+            extract_dir = os.path.join(settings.UPLOAD_DATA_PATH, f"extracted_{dataset.id}_{base_name}")
+            df, final_file_path = DatasetService.process_zip_archive(dest_path, extract_dir)
+            dataset.file_path = final_file_path
+            dataset.file_type = "zip"
+        elif ext in [".csv", ".xlsx", ".xls", ".json"]:
             df = DatasetService.load_dataset_file(dest_path)
+        elif ext in [".jpg", ".png", ".jpeg", ".webp", ".bmp"]:
+            # Synthesize single-image dataset
+            df = pd.DataFrame([{
+                "image_name": orig_name,
+                "image_path": safe_filename,
+                "station_id": "STATION_C",
+                "defect_class": "Inspection Sample",
+                "quality_status": "PENDING_INSPECTION",
+                "cycle_time": 24.0,
+                "utilization": 85.0,
+                "downtime_minutes": 5.0
+            }])
+
+        if df is not None:
             dataset.row_count = len(df)
             dataset.column_count = len(df.columns)
             
@@ -67,9 +92,12 @@ def upload_dataset(
             dataset.status = "PROFILED"
             db.commit()
             db.refresh(dataset)
-        except Exception as e:
-            dataset.status = "ERROR"
-            db.commit()
+    except Exception as e:
+        import traceback
+        print(f"Dataset profiling error: {traceback.format_exc()}")
+        dataset.status = "ERROR"
+        db.commit()
+        db.refresh(dataset)
 
     return dataset
 
