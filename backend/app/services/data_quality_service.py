@@ -40,13 +40,26 @@ class DataQualityService:
         labels_avail = 0
 
         if not df.empty:
+            # Determine base dataset directory for relative paths
+            base_dir = os.path.dirname(dataset.file_path) if dataset.file_path else ""
+
             # Check Image column quality if mapped
             img_col = role_map.get("INSPECTION_IMAGE")
             if img_col and img_col in df.columns:
                 valid_imgs = 0
                 for img_val in df[img_col].dropna():
-                    if isinstance(img_val, str) and (os.path.exists(img_val) or img_val.startswith("data/")):
-                        valid_imgs += 1
+                    if isinstance(img_val, str):
+                        clean_val = img_val.strip().replace("\\", "/")
+                        candidate_paths = [
+                            clean_val,
+                            os.path.join(base_dir, clean_val),
+                            os.path.join("data/uploads", clean_val),
+                            os.path.join("data/raw", clean_val),
+                            os.path.join(base_dir, os.path.basename(clean_val)),
+                            os.path.join("data/uploads", os.path.basename(clean_val))
+                        ]
+                        if any(os.path.exists(p) for p in candidate_paths):
+                            valid_imgs += 1
                 images_avail = valid_imgs
                 if valid_imgs < len(df[img_col].dropna()):
                     missing_imgs = len(df[img_col].dropna()) - valid_imgs
